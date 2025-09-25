@@ -1,0 +1,321 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String      @id @default(cuid())
+  email      String      @unique
+  name       String?
+  role       UserRole    @default(USER)
+  isActive   Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  lastLogin  DateTime?
+  auditLogs  AuditLog[]
+  kycRecords KYCRecord[]
+
+  @@map("users")
+}
+
+model KYCRecord {
+  id                       String            @id @default(cuid())
+  userId                   String?
+  name                     String
+  email                    String
+  phone                    String
+  pan                      String            @unique
+  dateOfBirth              String
+  address                  Json
+  status                   KYCStatus         @default(PENDING)
+  verificationLevel        VerificationLevel @default(L1)
+  remarks                  String?
+  verifiedBy               String?
+  verifiedAt               DateTime?
+  rejectedAt               DateTime?
+  expiresAt                DateTime?
+  blockchainTxHash         String?
+  lastBlockchainTxHash     String?
+  blockchainVerificationTx String?
+  blockchainRejectionTx    String?
+  blockchainBlockNumber    Int?
+  processingStartedAt      DateTime?
+  processingCompletedAt    DateTime?
+  processingTimeHours      Float?
+  riskScore                Float?            @default(0.0)
+  complianceFlags          Json?
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+  auditLogs                AuditLog[]
+  documents                Document[]
+  user                     User?             @relation(fields: [userId], references: [id])
+  riskAssessments          RiskAssessment[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([verificationLevel])
+  @@map("kyc_records")
+}
+
+model Document {
+  id              String       @id @default(cuid())
+  kycRecordId     String
+  type            DocumentType
+  fileName        String
+  fileSize        Int
+  mimeType        String
+  documentHash    String
+  ipfsHash        String
+  ipfsUrl         String
+  isProcessed     Boolean      @default(false)
+  processingError String?
+  ocrResults      Json?
+  analysisResults Json?
+  uploadedAt      DateTime     @default(now())
+  processedAt     DateTime?
+  kycRecord       KYCRecord    @relation(fields: [kycRecordId], references: [id], onDelete: Cascade)
+
+  @@index([type])
+  @@index([uploadedAt])
+  @@map("documents")
+}
+
+model RiskAssessment {
+  id                String    @id @default(cuid())
+  kycRecordId       String
+  riskLevel         RiskLevel
+  riskScore         Float
+  riskFactors       Json
+  assessedBy        String
+  assessedAt        DateTime  @default(now())
+  sanctionCheck     Boolean   @default(false)
+  pepCheck          Boolean   @default(false)
+  adverseMediaCheck Boolean   @default(false)
+  kycRecord         KYCRecord @relation(fields: [kycRecordId], references: [id], onDelete: Cascade)
+
+  @@map("risk_assessments")
+}
+
+model AuditLog {
+  id          String      @id @default(cuid())
+  kycRecordId String
+  userId      String?
+  action      AuditAction
+  performedBy String
+  ipAddress   String?
+  userAgent   String?
+  sessionId   String?
+  txId        String?
+  details     Json?
+  remarks     String?
+  performedAt DateTime    @default(now())
+  kycRecord   KYCRecord   @relation(fields: [kycRecordId], references: [id], onDelete: Cascade)
+  user        User?       @relation(fields: [userId], references: [id])
+
+  @@index([performedAt])
+  @@index([action])
+  @@map("audit_logs")
+}
+
+model SystemStats {
+  id                         String    @id @default("system_stats")
+  totalSubmissions           Int       @default(0)
+  pendingVerifications       Int       @default(0)
+  verifiedRecords            Int       @default(0)
+  rejectedRecords            Int       @default(0)
+  expiredRecords             Int       @default(0)
+  averageProcessingTimeHours Float     @default(0)
+  averageRiskScore           Float     @default(0)
+  totalBlockchainTxs         Int       @default(0)
+  lastBlockchainSync         DateTime?
+  blockchainHeight           Int       @default(0)
+  totalDocuments             Int       @default(0)
+  totalDocumentSize          BigInt    @default(0)
+  lastUpdated                DateTime  @updatedAt
+
+  @@map("system_stats")
+}
+
+model SystemConfig {
+  id                  String   @id @default("system_config")
+  autoApprovalEnabled Boolean  @default(false)
+  maxFileSize         Int      @default(5242880)
+  maxFilesPerUpload   Int      @default(10)
+  riskThresholds      Json
+  miningDifficulty    Int      @default(4)
+  miningReward        Float    @default(100)
+  gasPrice            Float    @default(1)
+  emailNotifications  Boolean  @default(true)
+  smsNotifications    Boolean  @default(false)
+  maintenanceMode     Boolean  @default(false)
+  maintenanceMessage  String?
+  updatedAt           DateTime @updatedAt
+  updatedBy           String?
+
+  @@map("system_config")
+}
+
+model DocumentHashRegistry {
+  id                  String             @id @default(cuid())
+  documentHash        String             @unique
+  ipfsHash            String
+  originalFileName    String
+  fileSize            Int
+  mimeType            String
+  firstSubmittedBy    String
+  firstSubmissionTime DateTime           @default(now())
+  firstKycRecordId    String
+  submissionCount     Int                @default(1)
+  lastSubmittedBy     String
+  lastSubmissionTime  DateTime           @default(now())
+  lastKycRecordId     String
+  isVerified          Boolean            @default(false)
+  verificationStatus  VerificationStatus @default(PENDING)
+  blockchainTxHash    String?
+  blockNumber         Int?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  forgeryReports      ForgeryReport[]
+
+  @@index([documentHash])
+  @@index([firstSubmittedBy])
+  @@index([submissionCount])
+  @@map("document_hash_registry")
+}
+
+model TransactionHashRegistry {
+  id                String    @id @default(cuid())
+  transactionHash   String    @unique
+  kycRecordId       String
+  blockNumber       Int?
+  blockHash         String?
+  documentHashes    Json
+  contentHash       String
+  submittedBy       String
+  submittedAt       DateTime  @default(now())
+  isVerified        Boolean   @default(false)
+  verifiedAt        DateTime?
+  verificationError String?
+  confirmations     Int       @default(0)
+  isConfirmed       Boolean   @default(false)
+  confirmedAt       DateTime?
+
+  @@index([transactionHash])
+  @@index([kycRecordId])
+  @@index([submittedBy])
+  @@map("transaction_hash_registry")
+}
+
+model ForgeryReport {
+  id                    String                @id @default(cuid())
+  forgeryType           ForgeryType
+  severity              RiskLevel
+  title                 String
+  description           String
+  suspiciousKycRecordId String
+  originalKycRecordId   String?
+  documentHashId        String?
+  transactionHash       String?
+  detectedBy            String
+  detectionMethod       String
+  evidence              Json
+  status                VerificationStatus    @default(PENDING)
+  investigatedBy        String?
+  investigatedAt        DateTime?
+  resolution            String?
+  actionsTaken          Json?
+  isResolved            Boolean               @default(false)
+  resolvedAt            DateTime?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  documentHash          DocumentHashRegistry? @relation(fields: [documentHashId], references: [id])
+
+  @@index([forgeryType])
+  @@index([severity])
+  @@index([status])
+  @@index([createdAt])
+  @@map("forgery_reports")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
+  AUDITOR
+}
+
+enum KYCStatus {
+  PENDING
+  UNDER_REVIEW
+  VERIFIED
+  REJECTED
+  EXPIRED
+  SUSPENDED
+}
+
+enum VerificationLevel {
+  L1
+  L2
+  L3
+}
+
+enum DocumentType {
+  PAN
+  AADHAAR
+  PASSPORT
+  BANK_STATEMENT
+  UTILITY_BILL
+  DRIVING_LICENSE
+  VOTER_ID
+  BIRTH_CERTIFICATE
+  INCOME_CERTIFICATE
+  OTHER
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AuditAction {
+  CREATED
+  UPDATED
+  VERIFIED
+  REJECTED
+  EXPIRED
+  SUSPENDED
+  DOCUMENT_UPLOADED
+  DOCUMENT_PROCESSED
+  STATUS_CHANGED
+  ADMIN_REVIEW
+  RISK_ASSESSMENT
+  BLOCKCHAIN_TRANSACTION
+  LOGIN
+  LOGOUT
+  CONFIG_CHANGED
+  FORGERY_DETECTED
+  DUPLICATE_DOCUMENT
+  HASH_MISMATCH
+}
+
+enum ForgeryType {
+  DOCUMENT_HASH_MISMATCH
+  DUPLICATE_SUBMISSION
+  TAMPERED_CONTENT
+  FAKE_TRANSACTION_HASH
+  BLOCKCHAIN_INCONSISTENCY
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  FAILED
+  SUSPICIOUS
+  FLAGGED
+}
