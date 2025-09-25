@@ -20,7 +20,7 @@ postgresql://username:password@host:port/database_name?sslmode=require
 
 Example:
 ```
-postgresql://avnadmin:AVNS_ltoOZ6TzwV4Xg61XsSI@blockchain-maskeriya338-1f80.f.aivencloud.com:27251/defaultdb?sslmode=require
+postgresql://username:password@host:port/database_name?sslmode=require
 ```
 
 ### 2. Add Environment Variables to Netlify
@@ -38,7 +38,7 @@ postgresql://avnadmin:AVNS_ltoOZ6TzwV4Xg61XsSI@blockchain-maskeriya338-1f80.f.ai
 
 Example values:
 ```
-DATABASE_URL=postgresql://avnadmin:AVNS_ltoOZ6TzwV4Xg61XsSI@blockchain-maskeriya338-1f80.f.aivencloud.com:27251/defaultdb?sslmode=require
+DATABASE_URL=postgresql://username:password@host:port/database_name?sslmode=require
 NODE_ENV=production
 JWT_SECRET=your_super_secure_jwt_secret_here_replace_with_random_string
 ENCRYPTION_KEY=your_32_character_encryption_key_here

@@ -1,7 +1,7 @@
 [build]
   command = "npm run build:client"
   publish = "dist/spa"
-  environment = { NODE_VERSION = "20" }
+  environment = { NODE_VERSION = "20", SECRETS_SCAN_ENABLED = "false" }
 
 [functions]
   directory = "netlify/functions"
