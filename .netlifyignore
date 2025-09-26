@@ -1,0 +1,47 @@
+# Environment files
+.env*
+*.env
+netlify.env*
+render.env*
+
+# Documentation with example values
+*.md
+!README.md
+!QUICK-START.md
+
+# Build artifacts
+dist/
+build/
+.dist/
+.build/
+
+# Deployment directories
+netlify-deploy/
+simple-deploy/
+static-deploy/
+vercel-static-deploy/
+
+# Scripts
+scripts/
+
+# Docker files
+docker-compose.yaml
+Dockerfile
+nginx.conf
+
+# Git
+.git*
+
+# Backup files
+*.backup
+*.bak
+
+# Generated files
+generate-env-vars*
+
+# Node modules
+node_modules/
+
+# Temporary files
+tmp/
+temp/
